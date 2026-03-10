@@ -1,13 +1,35 @@
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-    <title>PickUpPal</title>
-    <link rel="stylesheet" type="text/css" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PickUpPal Application</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="script.js"></script>
 </head>
 <body>
-    <h1>Welcome to PickUpPal</h1>
-    <div id="app">
-        <!-- Complete PickUpPal application HTML content here -->
-    </div>
+    <header>
+        <h1>Welcome to PickUpPal</h1>
+    </header>
+    <main>
+        <section>
+            <h2>Your Pickup Schedule</h2>
+            <div id="schedule"></div>
+        </section>
+        <section>
+            <h2>Request a Pickup</h2>
+            <form id="pickup-form">
+                <label for="pickup-location">Location:</label>
+                <input type="text" id="pickup-location" required>
+                <label for="pickup-time">Time:</label>
+                <input type="datetime-local" id="pickup-time" required>
+                <button type="submit">Request Pickup</button>
+            </form>
+        </section>
+    </main>
+    <footer>
+        <p>&copy; 2026 PickUpPal. All rights reserved.</p>
+    </footer>
     <script src="app.js"></script>
 </body>
 </html>
