@@ -227,7 +227,7 @@
                 </div>
                 
                 <div class="text-center md:text-right">
-                    <p class="text-gray-400 text-sm mb-2">© 2023 PickUpPal. All rights reserved.</p>
+                    <p class="text-gray-400 text-sm mb-2">© 2026 PickUpPal. All rights reserved.</p>
                     <div id="footer-links" class="flex gap-4 justify-center md:justify-end">
                         <!-- Footer links will be rendered here -->
                     </div>
@@ -828,6 +828,71 @@
             initializeApp();
             setupEventHandlers();
         });
+        // ================= SIMPLE NAVIGATION =================
+function showScreen(screenId) {
+    const screens = document.querySelectorAll('.screen');
+    screens.forEach(screen => screen.style.display = 'none');
+
+    const target = document.getElementById(screenId);
+    if (target) target.style.display = 'block';
+}
+
+// ================= CHILD STORAGE =================
+let children = JSON.parse(localStorage.getItem("pickuppal_children")) || [];
+
+function saveChildren() {
+    localStorage.setItem("pickuppal_children", JSON.stringify(children));
+}
+
+function renderChildren() {
+    const list = document.getElementById("child-list");
+    if (!list) return;
+
+    list.innerHTML = "";
+
+    children.forEach((child, index) => {
+        const div = document.createElement("div");
+        div.style.padding = "8px";
+        div.style.borderBottom = "1px solid #ddd";
+
+        div.innerHTML =
+            "<strong>" + child.name + "</strong><br>" +
+            child.school + "<br>" +
+            "Pickup: " + child.time;
+
+        list.appendChild(div);
+    });
+}
+
+// ================= ADD CHILD =================
+function addChild(event) {
+    event.preventDefault();
+
+    const name = document.getElementById("child-name").value;
+    const school = document.getElementById("child-school").value;
+    const time = document.getElementById("pickup-time").value;
+
+    children.push({
+        name: name,
+        school: school,
+        time: time
+    });
+
+    saveChildren();
+    renderChildren();
+
+    document.getElementById("child-form").reset();
+}
+
+// ================= START APP =================
+window.addEventListener("DOMContentLoaded", () => {
+
+    const form = document.getElementById("child-form");
+    if (form) form.addEventListener("submit", addChild);
+
+    renderChildren();
+
+});
     </script>
 </body>
 </html>
