@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <base target="_self">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PickUpPal - Family Pickup Management</title>
+    <meta name="description" content="Help busy families manage school and sports pickup times. Pickup Captain manages schedules, family members receive updates.">
+    <meta name="theme-color" content="#4f46e5">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚗</text></svg>">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#4f46e5",
+                        secondary: "#f97316",
+                        accent: "#10b981",
+                        background: "#f8fafc",
+                        card: "#ffffff"
+                    },
+                    fontFamily: {
+                        'sans': ['Inter', 'system-ui', 'sans-serif']
+                    },
+                    boxShadow: {
+                        'card': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                        'button': '0 2px 4px rgba(0, 0, 0, 0.1)'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        .pwa-install-prompt {
+            animation: slideDown 0.3s ease-out;
+        }
+        
+        @keyframes slideDown {
+            from { transform: translateY(-100%); }
+            to { transform: translateY(0); }
+        }
+        
+        .child-card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .child-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 12px -1px rgba(0, 0, 0, 0.1), 0 4px 6px -1px rgba(0, 0, 0, 0.06);
+        }
+        
+        .schedule-day.active {
+            background-color: #4f46e5;
+            color: white;
+        }
+        
+        .notification-badge {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+        
+        .offline-banner {
+            animation: slideUp 0.3s ease-out;
+        }
+        
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-background text-gray-800">
+    <!-- PWA Install Prompt -->
+    <div id="pwa-prompt" class="pwa-install-prompt hidden bg-primary text-white p-4">
+        <div class="container mx-auto flex justify-between items-center">
+            <div>
+                <p class="font-medium">Install PickUpPal for quick access</p>
+                <p class="text-sm opacity-90">Get home screen icon and offline access</p>
+            </div>
+            <div class="flex gap-2">
+                <button id="install-dismiss" class="px-3 py-1 bg-white text-primary rounded-lg font-medium">Not now</button>
+                <button id="install-accept" class="px-3 py-1 bg-accent text-white rounded-lg font-medium">Install</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Offline Banner -->
+    <div id="offline-banner" class="offline-banner hidden bg-yellow-100 text-yellow-800 p-3 text-center">
+        <p class="font-medium">You're offline. Some features may be limited.</p>
+    </div>
+
+    <!-- Header -->
+    <header class="bg-white shadow-card sticky top-0 z-10">
+        <div class="container mx-auto px-4 py-3">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-primary rounded-lg flex items-center justify-center text-white text-xl">
+                        🚗
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold text-gray-900">PickUpPal</h1>
+                        <p class="text-xs text-gray-500">Family pickup management</p>
+                    </div>
+                </div>
+                
+                <div class="flex items-center gap-4">
+                    <div class="relative">
+                        <button id="notifications-btn" class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors">
+                            <span class="text-gray-700">🔔</span>
+                            <span id="notification-count" class="notification-badge absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center hidden">3</span>
+                        </button>
+                    </div>
+                    <div class="relative">
+                        <button id="user-menu-btn" class="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 rounded-full pl-3 pr-4 py-2 transition-colors">
+                            <div class="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-sm font-medium">PC</div>
+                            <span class="text-sm font-medium hidden sm:inline">Pickup Captain</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-6">
+        <!-- Today's Overview -->
+        <section class="mb-8">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold text-gray-900">Today's Pickups</h2>
+                <div class="text-sm text-gray-600">
+                    <span id="current-date" class="font-medium">Monday, March 18</span>
+                    <span class="mx-2">•</span>
+                    <span id="current-time" class="font-medium">2:30 PM</span>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-xl shadow-card p-4 mb-4">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="font-semibold text-gray-900">Today's Override</h3>
+                    <button id="override-today-btn" class="px-4 py-2 bg-secondary text-white rounded-lg font-medium hover:bg-orange-600 transition-colors">Override Today</button>
+                </div>
+                <p class="text-gray-600 text-sm">No overrides set for today. All pickups are as scheduled.</p>
+            </div>
+            
+            <div id="children-dashboard" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Children cards will be rendered here -->
+            </div>
+        </section>
+
+        <!-- Weekly Schedule -->
+        <section class="mb-8">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold text-gray-900">Weekly Schedule</h2>
+                <button id="edit-schedule-btn" class="px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors">Edit Schedule</button>
+            </div>
+            
+            <div class="bg-white rounded-xl shadow-card overflow-hidden">
+                <div id="schedule-days" class="flex border-b overflow-x-auto">
+                    <!-- Schedule days will be rendered here -->
+                </div>
+                
+                <div id="schedule-content" class="p-4">
+                    <!-- Schedule content will be rendered here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Lift Share -->
+        <section class="mb-8">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold text-gray-900">Lift Share</h2>
+                <div class="text-sm text-gray-600">For sports team activities</div>
+            </div>
+            
+            <div id="lift-share-activities" class="space-y-4">
+                <!-- Lift share activities will be rendered here -->
+            </div>
+        </section>
+
+        <!-- Family Sharing -->
+        <section class="mb-8">
+            <div class="bg-white rounded-xl shadow-card p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-900">Family Sharing</h2>
+                        <p class="text-gray-600">Invite other caregivers to receive updates</p>
+                    </div>
+                    <button id="invite-family-btn" class="px-4 py-2 bg-accent text-white rounded-lg font-medium hover:bg-emerald-600 transition-colors">Invite Caregiver</button>
+                </div>
+                
+                <div id="family-members-list" class="space-y-3">
+                    <!-- Family members will be rendered here -->
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-white py-8">
+        <div class="container mx-auto px-4">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="mb-6 md:mb-0">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-10 h-10 bg-white rounded-lg flex items-center justify-center text-gray-900 text-xl">
+                            🚗
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold">PickUpPal</h3>
+                            <p class="text-gray-400 text-sm">Simplify family logistics</p>
+                        </div>
+                    </div>
+                    <p class="text-gray-400 text-sm max-w-md">Helping busy families manage school and sports pickup times. Pickup Captain manages schedules, family members receive updates.</p>
+                </div>
+                
+                <div class="text-center md:text-right">
+                    <p class="text-gray-400 text-sm mb-2">© 2023 PickUpPal. All rights reserved.</p>
+                    <div id="footer-links" class="flex gap-4 justify-center md:justify-end">
+                        <!-- Footer links will be rendered here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Modals -->
+    <div id="override-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white rounded-xl shadow-card max-w-md w-full p-6">
+            <h3 class="text-xl font-bold text-gray-900 mb-4">Override Today's Pickup</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Select Child</label>
+                    <select id="override-child-select" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary">
+                        <!-- Options will be populated by JavaScript -->
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">New Pickup Time</label>
+                    <input type="time" id="override-time-input" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary" value="15:30">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Notes (Optional)</label>
+                    <textarea id="override-notes" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary" rows="3" placeholder="E.g., Early dismissal, different location..."></textarea>
+                </div>
+                <div class="flex gap-2 pt-4">
+                    <button id="cancel-override" class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors">Cancel</button>
+                    <button id="save-override" class="flex-1 px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors">Save Override</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="invite-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white rounded-xl shadow-card max-w-md w-full p-6">
+            <h3 class="text-xl font-bold text-gray-900 mb-4">Invite Caregiver</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                    <input type="email" id="invite-email" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary" placeholder="family.member@example.com">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                    <select id="invite-role" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary">
+                        <option value="follower">Follower (view only)</option>
+                        <option value="assistant">Assistant (limited edit)</option>
+                    </select>
+                </div>
+                <div class="flex gap-2 pt-4">
+                    <button id="cancel-invite" class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors">Cancel</button>
+                    <button id="send-invite" class="flex-1 px-4 py-2 bg-accent text-white rounded-lg font-medium hover:bg-emerald-600 transition-colors">Send Invitation</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Service Worker Registration -->
+    <script>
+        // Register service worker for PWA functionality
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').catch(error => {
+                    console.log('Service Worker registration failed:', error);
+                });
+            });
+        }
+        
+        // Check online/offline status
+        window.addEventListener('online', () => {
+            document.getElementById('offline-banner').classList.add('hidden');
+        });
+        
+        window.addEventListener('offline', () => {
+            document.getElementById('offline-banner').classList.remove('hidden');
+        });
+        
+        // Initial offline check
+        if (!navigator.onLine) {
+            document.getElementById('offline-banner').classList.remove('hidden');
+        }
+    </script>
+
+    <!-- Application Data and Logic -->
+    <script>
+        // ==================== DATA LAYER ====================
+        const childrenData = [
+            {
+                "id": 1,
+                "name": "Emma Johnson",
+                "school": "Maple Elementary",
+                "activity": "Soccer Practice",
+                "todayPickupTime": "3:15 PM",
+                "activityNotes": "Bring water bottle and cleats",
+                "weeklySchedule": {
+                    "monday": "3:15 PM",
+                    "tuesday": "2:45 PM",
+                    "wednesday": "3:15 PM",
+                    "thursday": "2:45 PM",
+                    "friday": "3:00 PM"
+                }
+            },
+            {
+                "id": 2,
+                "name": "Noah Johnson",
+                "school": "Oak Middle School",
+                "activity": "Piano Lessons",
+                "todayPickupTime": "4:30 PM",
+                "activityNotes": "Remember music book",
+                "weeklySchedule": {
+                    "monday": "4:30 PM",
+                    "tuesday": "No pickup",
+                    "wednesday": "4:30 PM",
+                    "thursday": "No pickup",
+                    "friday": "No pickup"
+                }
+            },
+            {
+                "id": 3,
+                "name": "Sophia Johnson",
+                "school": "Pine Preschool",
+                "activity": "Playdate",
+                "todayPickupTime": "2:00 PM",
+                "activityNotes": "Pick up from Jenny's house",
+                "weeklySchedule": {
+                    "monday": "2:00 PM",
+                    "tuesday": "2:00 PM",
+                    "wednesday": "2:00 PM",
+                    "thursday": "2:00 PM",
+                    "friday": "2:00 PM"
+                }
+            }
+        ];
+
+        const liftShareActivities = [
+            {
+                "id": 1,
+                "childName": "Emma Johnson",
+                "activity": "Soccer Practice",
+                "location": "Community Field",
+                "time": "3:15 PM",
+                "driver": "Mike Davis",
+                "seatsAvailable": 3,
+                "requests": [
+                    { "name": "Sarah Wilson", "status": "pending" },
+                    { "name": "Tom Chen", "status": "confirmed" }
+                ]
+            },
+            {
+                "id": 2,
+                "childName": "Noah Johnson",
+                "activity": "Basketball Team",
+                "location": "High School Gym",
+                "time": "5:00 PM",
+                "driver": "Not assigned",
+                "seatsAvailable": 0,
+                "requests": []
+            }
+        ];
+
+        const familyMembers = [
+            { "name": "David Johnson", "email": "david@example.com", "role": "Pickup Captain", "status": "active" },
+            { "name": "Lisa Johnson", "email": "lisa@example.com", "role": "Follower", "status": "active" },
+            { "name": "Grandma Mary", "email": "mary@example.com", "role": "Follower", "status": "pending" }
+        ];
+
+        const notifications = [
+            { "id": 1, "type": "schedule", "message": "Emma's pickup changed to 3:30 PM today", "time": "2 hours ago", "read": false },
+            { "id": 2, "type": "liftShare", "message": "Mike Davis offered seats for Soccer Practice", "time": "1 day ago", "read": false },
+            { "id": 3, "type": "family", "message": "Grandma Mary accepted your invitation", "time": "2 days ago", "read": true }
+        ];
+
+        const footerLinks = [
+            { "label": "Privacy Policy", "href": "#privacy" },
+            { "label": "Terms of Service", "href": "#terms" },
+            { "label": "Help Center", "href": "#help" },
+            { "label": "Contact Us", "href": "#contact" }
+        ];
+
+        const weekDays = [
+            { "id": "monday", "label": "Mon", "full": "Monday" },
+            { "id": "tuesday", "label": "Tue", "full": "Tuesday" },
+            { "id": "wednesday", "label": "Wed", "full": "Wednesday" },
+            { "id": "thursday", "label": "Thu", "full": "Thursday" },
+            { "id": "friday", "label": "Fri", "full": "Friday" }
+        ];
+
+        // ==================== RENDER FUNCTIONS ====================
+        function renderChildCard(child) {
+            return `
+                <div class="child-card bg-card rounded-xl shadow-card p-5 border border-gray-100">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-900">${child.name}</h3>
+                            <p class="text-gray-600">${child.school}</p>
+                        </div>
+                        <button class="edit-pickup-btn" data-child-id="${child.id}" class="text-primary hover:text-indigo-700">
+                            <span class="text-lg">✏️</span>
+                        </button>
+                    </div>
+                    
+                    <div class="space-y-3">
+                        <div class="flex items-center">
+                            <span class="text-gray-500 mr-2">⏰</span>
+                            <div>
+                                <p class="font-medium text-gray-900">Today's pickup: ${child.todayPickupTime}</p>
+                                <p class="text-sm text-gray-600">${child.activity}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-start">
+                            <span class="text-gray-500 mr-2">📝</span>
+                            <p class="text-gray-700">${child.activityNotes}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4 pt-4 border-t border-gray-100">
+                        <button data-child-id="${child.id}" class="edit-schedule-btn w-full py-2 border border-primary text-primary rounded-lg font-medium hover:bg-indigo-50 transition-colors">
+                            Edit Weekly Schedule
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderScheduleDay(day, isActive = false) {
+            return `
+                <button class="schedule-day ${isActive ? 'active' : ''} flex-1 min-w-[80px] py-3 px-2 text-center font-medium transition-colors" data-day="${day.id}">
+                    <div class="text-sm">${day.label}</div>
+                    <div class="text-xs opacity-70 mt-1">${getChildScheduleForDay(day.id)}</div>
+                </button>
+            `;
+        }
+
+        function renderLiftShareActivity(activity) {
+            const hasDriver = activity.driver !== "Not assigned";
+            const seatsText = activity.seatsAvailable > 0 ? `${activity.seatsAvailable} seat${activity.seatsAvailable > 1 ? 's' : ''} available` : "No seats available";
+            
+            return `
+                <div class="bg-card rounded-xl shadow-card p-5 border border-gray-100">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h3 class="text-lg font-bold text-gray-900">${activity.activity}</h3>
+                            <p class="text-gray-600">${activity.childName}</p>
+                        </div>
+                        <span class="px-3 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded-full">Lift Share</span>
+                    </div>
+                    
+                    <div class="space-y-3 mb-4">
+                        <div class="flex items-center">
+                            <span class="text-gray-500 mr-2">📍</span>
+                            <p class="text-gray-700">${activity.location}</p>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="text-gray-500 mr-2">⏰</span>
+                            <p class="text-gray-700">${activity.time}</p>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="text-gray-500 mr-2">👤</span>
+                            <p class="text-gray-700 ${hasDriver ? '' : 'text-gray-500'}">
+                                ${hasDriver ? `Driver: ${activity.driver}` : 'No driver assigned'}
+                            </p>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="text-gray-500 mr-2">🚗</span>
+                            <p class="text-gray-700 ${activity.seatsAvailable > 0 ? 'text-green-600 font-medium' : ''}">
+                                ${seatsText}
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex gap-2">
+                        <button data-activity-id="${activity.id}" class="offer-seats-btn flex-1 py-2 bg-primary text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors">
+                            Offer Seats
+                        </button>
+                        <button data-activity-id="${activity.id}" class="request-seat-btn flex-1 py-2 border border-primary text-primary rounded-lg font-medium hover:bg-indigo-50 transition-colors ${activity.seatsAvailable === 0 ? 'opacity-50 cursor-not-allowed' : ''}" ${activity.seatsAvailable === 0 ? 'disabled' : ''}>
+                            Request Seat
+                        </button>
+                    </div>
+                    
+                    ${activity.requests.length > 0 ? `
+                        <div class="mt-4 pt-4 border-t border-gray-100">
+                            <h4 class="font-medium text-gray-900 mb-2">Seat Requests</h4>
+                            <div class="space-y-2">
+                                ${activity.requests.map(request => `
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-gray-700">${request.name}</span>
+                                        <span class="px-2 py-1 text-xs rounded-full ${request.status === 'confirmed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">
+                                            ${request.status}
+                                        </span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        function renderFamilyMember(member) {
+            const statusColor = member.status === 'active' ? 'bg-green-100 text-green-800' : 
+                              member.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 
+                              'bg-gray-100 text-gray-800';
+            
+            return `
+                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-medium">
+                            ${member.name.charAt(0)}
+                        </div>
+                        <div>
+                            <p class="font-medium text-gray-900">${member.name}</p>
+                            <p class="text-sm text-gray-600">${member.email}</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <p class="font-medium text-gray-900">${member.role}</p>
+                        <span class="px-2 py-1 text-xs rounded-full ${statusColor}">
+                            ${member.status}
+                        </span>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderFooterLink(link) {
+            return `
+                <a href="${link.href}" class="text-gray-400 hover:text-white transition-colors text-sm">
+                    ${link.label}
+                </a>
+            `;
+        }
+
+        function renderScheduleContent(dayId) {
+            const dayName = weekDays.find(d => d.id === dayId)?.full || dayId;
+            let content = `<h3 class="text-lg font-bold text-gray-900 mb-4">${dayName}'s Schedule</h3>`;
+            
+            childrenData.forEach(child => {
+                const pickupTime = child.weeklySchedule[dayId] || "No pickup";
+                if (pickupTime !== "No pickup") {
+                    content += `
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg mb-2">
+                            <div>
+                                <p class="font-medium text-gray-900">${child.name}</p>
+                                <p class="text-sm text-gray-600">${child.activity}</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="font-medium text-gray-900">${pickupTime}</p>
+                                <button data-child-id="${child.id}" data-day="${dayId}" class="edit-day-btn text-sm text-primary hover:text-indigo-700">Edit</button>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+            
+            return content;
+        }
+
+        // ==================== HELPER FUNCTIONS ====================
+        function getChildScheduleForDay(dayId) {
+            const times = childrenData
+                .map(child => child.weeklySchedule[dayId])
+                .filter(time => time && time !== "No pickup");
+            
+            if (times.length === 0) return "No pickups";
+            if (times.length === 1) return times[0];
+            return `${times.length} pickups`;
+        }
+
+        function updateDateTime() {
+            const now = new Date();
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('current-date').textContent = now.toLocaleDateString('en-US', options);
+            
+            const timeOptions = { hour: '2-digit', minute: '2-digit' };
+            document.getElementById('current-time').textContent = now.toLocaleTimeString('en-US', timeOptions);
+        }
+
+        function updateNotificationBadge() {
+            const unreadCount = notifications.filter(n => !n.read).length;
+            const badge = document.getElementById('notification-count');
+            
+            if (unreadCount > 0) {
+                badge.textContent = unreadCount;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        function showPWAInstallPrompt() {
+            // Simulate PWA install prompt after 5 seconds
+            setTimeout(() => {
+                const prompt = document.getElementById('pwa-prompt');
+                prompt.classList.remove('hidden');
+            }, 5000);
+        }
+
+        // ==================== INITIALIZATION ====================
+        function initializeApp() {
+            // Render children dashboard
+            document.getElementById('children-dashboard').innerHTML = 
+                childrenData.map(child => renderChildCard(child)).join('');
+            
+            // Render schedule days
+            document.getElementById('schedule-days').innerHTML = 
+                weekDays.map((day, index) => renderScheduleDay(day, index === 0)).join('');
+            
+            // Render initial schedule content (Monday)
+            document.getElementById('schedule-content').innerHTML = renderScheduleContent('monday');
+            
+            // Render lift share activities
+            document.getElementById('lift-share-activities').innerHTML = 
+                liftShareActivities.map(activity => renderLiftShareActivity(activity)).join('');
+            
+            // Render family members
+            document.getElementById('family-members-list').innerHTML = 
+                familyMembers.map(member => renderFamilyMember(member)).join('');
+            
+            // Render footer links
+            document.getElementById('footer-links').innerHTML = 
+                footerLinks.map(link => renderFooterLink(link)).join('');
+            
+            // Populate override child select
+            const overrideSelect = document.getElementById('override-child-select');
+            overrideSelect.innerHTML = childrenData.map(child => 
+                `<option value="${child.id}">${child.name}</option>`
+            ).join('');
+            
+            // Update date/time and notification badge
+            updateDateTime();
+            updateNotificationBadge();
+            
+            // Update time every minute
+            setInterval(updateDateTime, 60000);
+            
+            // Show PWA install prompt
+            showPWAInstallPrompt();
+        }
+
+        // ==================== EVENT HANDLERS ====================
+        function setupEventHandlers() {
+            // Schedule day switching
+            document.addEventListener('click', function(event) {
+                const scheduleDayBtn = event.target.closest('.schedule-day');
+                if (scheduleDayBtn) {
+                    event.preventDefault();
+                    const dayId = scheduleDayBtn.dataset.day;
+                    
+                    // Update active state
+                    document.querySelectorAll('.schedule-day').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    scheduleDayBtn.classList.add('active');
+                    
+                    // Update content
+                    document.getElementById('schedule-content').innerHTML = renderScheduleContent(dayId);
+                }
+                
+                // Edit pickup time button
+                const editPickupBtn = event.target.closest('.edit-pickup-btn');
+                if (editPickupBtn) {
+                    event.preventDefault();
+                    const childId = parseInt(editPickupBtn.dataset.childId);
+                    const child = childrenData.find(c => c.id === childId);
+                    
+                    // Show override modal with child pre-selected
+                    document.getElementById('override-child-select').value = childId;
+                    document.getElementById('override-modal').classList.remove('hidden');
+                }
+                
+                // Edit schedule button
+                const editScheduleBtn = event.target.closest('.edit-schedule-btn');
+                if (editScheduleBtn) {
+                    event.preventDefault();
+                    alert('Weekly schedule editor would open here. In a full implementation, this would allow editing pickup times for each day of the week.');
+                }
+                
+                // Edit day button
+                const editDayBtn = event.target.closest('.edit-day-btn');
+                if (editDayBtn) {
+                    event.preventDefault();
+                    const childId = parseInt(editDayBtn.dataset.childId);
+                    const dayId = editDayBtn.dataset.day;
+                    const child = childrenData.find(c => c.id === childId);
+                    
+                    alert(`Editing ${child.name}'s schedule for ${dayId}. Current time: ${child.weeklySchedule[dayId]}`);
+                }
+                
+                // Lift share buttons
+                const offerSeatsBtn = event.target.closest('.offer-seats-btn');
+                if (offerSeatsBtn) {
+                    event.preventDefault();
+                    const activityId = parseInt(offerSeatsBtn.dataset.activityId);
+                    alert(`Offer seats for activity ${activityId}. In a full implementation, this would open a form to specify available seats.`);
+                }
+                
+                const requestSeatBtn = event.target.closest('.request-seat-btn');
+                if (requestSeatBtn && !requestSeatBtn.disabled) {
+                    event.preventDefault();
+                    const activityId = parseInt(requestSeatBtn.dataset.activityId);
+                    alert(`Request seat for activity ${activityId}. In a full implementation, this would send a request to the driver.`);
+                }
+                
+                // Close modals when clicking outside
+                if (event.target.id === 'override-modal' || event.target.id === 'invite-modal') {
+                    event.target.classList.add('hidden');
+                }
+            });
+            
+            // Override today button
+            document.getElementById('override-today-btn').addEventListener('click', function() {
+                document.getElementById('override-modal').classList.remove('hidden');
+            });
+            
+            // Edit schedule button
+            document.getElementById('edit-schedule-btn').addEventListener('click', function() {
+                alert('Weekly schedule editor would open here. This would allow the Pickup Captain to set pickup times for each child for each day of the week.');
+            });
+            
+            // Invite family button
+            document.getElementById('invite-family-btn').addEventListener('click', function() {
+                document.getElementById('invite-modal').classList.remove('hidden');
+            });
+            
+            // Notifications button
+            document.getElementById('notifications-btn').addEventListener('click', function() {
+                alert(`You have ${notifications.filter(n => !n.read).length} unread notifications:\n\n` +
+                      notifications.map(n => `• ${n.message} (${n.time})`).join('\n'));
+                
+                // Mark all as read
+                notifications.forEach(n => n.read = true);
+                updateNotificationBadge();
+            });
+            
+            // Override modal buttons
+            document.getElementById('cancel-override').addEventListener('click', function() {
+                document.getElementById('override-modal').classList.add('hidden');
+            });
+            
+            document.getElementById('save-override').addEventListener('click', function() {
+                const childId = parseInt(document.getElementById('override-child-select').value);
+                const newTime = document.getElementById('override-time-input').value;
+                const notes = document.getElementById('override-notes').value;
+                
+                const child = childrenData.find(c => c.id === childId);
+                const timeString = new Date(`2000-01-01T${newTime}`).toLocaleTimeString('en-US', { 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                });
+                
+                alert(`Override saved for ${child.name}:\nNew pickup time: ${timeString}\nNotes: ${notes || 'None'}`);
+                document.getElementById('override-modal').classList.add('hidden');
+                
+                // Reset form
+                document.getElementById('override-notes').value = '';
+            });
+            
+            // Invite modal buttons
+            document.getElementById('cancel-invite').addEventListener('click', function() {
+                document.getElementById('invite-modal').classList.add('hidden');
+            });
+            
+            document.getElementById('send-invite').addEventListener('click', function() {
+                const email = document.getElementById('invite-email').value;
+                const role = document.getElementById('invite-role').value;
+                
+                if (!email) {
+                    alert('Please enter an email address');
+                    return;
+                }
+                
+                alert(`Invitation sent to ${email} as ${role}. They will receive an email to join the family.`);
+                document.getElementById('invite-modal').classList.add('hidden');
+                
+                // Reset form
+                document.getElementById('invite-email').value = '';
+            });
+            
+            // PWA install prompt buttons
+            document.getElementById('install-dismiss').addEventListener('click', function() {
+                document.getElementById('pwa-prompt').classList.add('hidden');
+            });
+            
+            document.getElementById('install-accept').addEventListener('click', function() {
+                alert('In a real PWA, this would trigger the browser\'s install prompt. For this demo, we\'ll simulate installation.');
+                document.getElementById('pwa-prompt').classList.add('hidden');
+                
+                // Simulate installation
+                const event = new CustomEvent('pwaInstalled');
+                window.dispatchEvent(event);
+            });
+        }
+
+        // ==================== APP START ====================
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeApp();
+            setupEventHandlers();
+        });
+    </script>
+</body>
+</html>
