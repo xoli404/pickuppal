@@ -828,6 +828,33 @@
             initializeApp();
             setupEventHandlers();
         });
+        // SIMPLE SCREEN NAVIGATION
+function showScreen(screenId) {
+
+    const screens = document.querySelectorAll("[data-screen]");
+    screens.forEach(screen => {
+        screen.style.display = "none";
+    });
+
+    const target = document.querySelector(`[data-screen="${screenId}"]`);
+    if (target) {
+        target.style.display = "block";
+    }
+}
+
+// Activate navigation buttons
+document.addEventListener("DOMContentLoaded", () => {
+
+    const navButtons = document.querySelectorAll("[data-nav]");
+
+    navButtons.forEach(btn => {
+        btn.addEventListener("click", () => {
+            const screen = btn.getAttribute("data-nav");
+            showScreen(screen);
+        });
+    });
+
+});
     </script>
 </body>
 </html>
