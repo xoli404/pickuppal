@@ -7,30 +7,24 @@
 <title>PickUpPal</title>
 
 <style>
-body{
-font-family:Arial, sans-serif;
-margin:0;
-background:#f6f6fb;
-}
+body{font-family:Arial;margin:0;background:#f6f6fb}
 
 header{
 background:#6b5cff;
 color:white;
 padding:16px;
 text-align:center;
-font-size:20px;
+font-size:20px
 }
 
-.container{
-padding:20px;
-}
+.container{padding:20px}
 
 .card{
 background:white;
 padding:16px;
 margin-bottom:15px;
 border-radius:10px;
-box-shadow:0 2px 6px rgba(0,0,0,0.1);
+box-shadow:0 2px 6px rgba(0,0,0,0.1)
 }
 
 .childCard{
@@ -41,27 +35,24 @@ border-radius:8px;
 border-left:5px solid #6b5cff;
 display:flex;
 justify-content:space-between;
-align-items:center;
+align-items:center
 }
 
 button{
 background:#6b5cff;
 color:white;
 border:none;
-padding:10px 14px;
+padding:8px 12px;
 border-radius:6px;
-cursor:pointer;
+cursor:pointer
 }
 
-.deleteBtn{
-background:#ff4d4d;
-margin-left:10px;
-}
+.deleteBtn{background:#ff4d4d}
 
 input{
 width:100%;
 padding:8px;
-margin:6px 0 10px 0;
+margin:6px 0 10px 0
 }
 
 nav{
@@ -70,8 +61,7 @@ bottom:0;
 width:100%;
 background:white;
 display:flex;
-justify-content:space-around;
-border-top:1px solid #ddd;
+border-top:1px solid #ddd
 }
 
 nav button{
@@ -79,21 +69,32 @@ flex:1;
 padding:14px;
 background:none;
 color:#444;
-font-size:16px;
+font-size:16px
 }
 
 nav button.activeTab{
 font-weight:bold;
-color:#6b5cff;
+color:#6b5cff
 }
 
 .screen{
 display:none;
-padding-bottom:80px;
+padding-bottom:80px
 }
 
-.active{
-display:block;
+.active{display:block}
+
+.scheduleRow{
+display:flex;
+justify-content:space-between;
+margin-bottom:10px
+}
+
+.liftCard{
+background:#eef0ff;
+padding:10px;
+margin-bottom:10px;
+border-radius:8px
 }
 </style>
 </head>
@@ -143,7 +144,39 @@ display:block;
 
 <div class="card">
 <h3>Weekly Schedule</h3>
-<p>Schedule editing coming soon.</p>
+
+<div class="scheduleRow">Monday <input type="time" id="mon"></div>
+<div class="scheduleRow">Tuesday <input type="time" id="tue"></div>
+<div class="scheduleRow">Wednesday <input type="time" id="wed"></div>
+<div class="scheduleRow">Thursday <input type="time" id="thu"></div>
+<div class="scheduleRow">Friday <input type="time" id="fri"></div>
+
+<button onclick="saveSchedule()">Save Weekly Schedule</button>
+
+</div>
+
+</div>
+
+<div id="liftshare" class="screen">
+
+<div class="card">
+<h3>Offer or Request a Lift</h3>
+
+<input id="parentName" placeholder="Parent name">
+<input id="schoolLift" placeholder="School name">
+
+<select id="liftType">
+<option value="offer">Offering a lift</option>
+<option value="request">Need a lift</option>
+</select>
+
+<button onclick="addLift()">Post Lift</button>
+
+</div>
+
+<div class="card">
+<h3>Lift Board</h3>
+<div id="liftBoard"></div>
 </div>
 
 </div>
@@ -151,137 +184,193 @@ display:block;
 </div>
 
 <nav>
-<button id="tabToday" onclick="showScreen('today',this)" class="activeTab">Today</button>
+<button onclick="showScreen('today',this)" class="activeTab">Today</button>
 <button onclick="showScreen('children',this)">Children</button>
 <button onclick="showScreen('schedule',this)">Schedule</button>
+<button onclick="showScreen('liftshare',this)">Lift-Share</button>
 </nav>
 
 <script>
 
 function showScreen(id,btn){
-
-document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
-document.getElementById(id).classList.add("active");
-
-document.querySelectorAll("nav button").forEach(b=>b.classList.remove("activeTab"));
-btn.classList.add("activeTab");
-
+document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"))
+document.getElementById(id).classList.add("active")
+document.querySelectorAll("nav button").forEach(b=>b.classList.remove("activeTab"))
+btn.classList.add("activeTab")
 }
 
 function getChildren(){
-return JSON.parse(localStorage.getItem("pickuppal_children")||"[]");
+return JSON.parse(localStorage.getItem("pickuppal_children")||"[]")
 }
 
 function saveChildren(children){
-localStorage.setItem("pickuppal_children",JSON.stringify(children));
-renderChildren();
+localStorage.setItem("pickuppal_children",JSON.stringify(children))
+renderChildren()
 }
 
 function addChild(){
 
-let name=document.getElementById("childName").value;
-let school=document.getElementById("schoolName").value;
-let time=document.getElementById("pickupTime").value;
+let name=childName.value
+let school=schoolName.value
+let time=pickupTime.value
 
-if(!name||!time)return;
+if(!name||!time)return
 
-let children=getChildren();
+let children=getChildren()
 
-children.push({name,school,time});
+children.push({name,school,time})
 
-saveChildren(children);
+saveChildren(children)
 
-document.getElementById("childName").value="";
-document.getElementById("schoolName").value="";
-document.getElementById("pickupTime").value="";
-
+childName.value=""
+schoolName.value=""
+pickupTime.value=""
 }
 
 function deleteChild(index){
 
-let children=getChildren();
-
-children.splice(index,1);
-
-saveChildren(children);
+let children=getChildren()
+children.splice(index,1)
+saveChildren(children)
 
 }
 
 function renderChildren(){
 
-let children=getChildren();
+let children=getChildren()
 
-let list=document.getElementById("childrenList");
-let pickup=document.getElementById("pickupList");
-
-list.innerHTML="";
-pickup.innerHTML="";
+childrenList.innerHTML=""
+pickupList.innerHTML=""
 
 children.forEach((c,i)=>{
 
-list.innerHTML+=`
+childrenList.innerHTML+=`
 <div class="childCard">
 <div>
 <b>${c.name}</b><br>
 ${c.school}<br>
-Pickup: ${c.time}
+Pickup ${c.time}<br>
+<button onclick="openMap('${c.school}')">Navigate</button>
 </div>
-<div>
 <button class="deleteBtn" onclick="deleteChild(${i})">Delete</button>
 </div>
-</div>
-`;
+`
 
-pickup.innerHTML+=`
+pickupList.innerHTML+=`
 <div class="childCard">
-<div>
-👧 <b>${c.name}</b><br>
-Pickup ${c.time}
+👧 <b>${c.name}</b> – pickup ${c.time}
 </div>
-</div>
-`;
+`
 
-});
+})
+
+}
+
+function openMap(school){
+
+let url="https://www.google.com/maps/search/"+encodeURIComponent(school)
+
+window.open(url,"_blank")
 
 }
 
 function playChime(){
 
-let ctx=new (window.AudioContext||window.webkitAudioContext)();
-let o=ctx.createOscillator();
-let g=ctx.createGain();
+let ctx=new (window.AudioContext||window.webkitAudioContext)()
+let o=ctx.createOscillator()
+let g=ctx.createGain()
 
-o.type="sine";
-o.frequency.value=880;
+o.type="sine"
+o.frequency.value=880
 
-o.connect(g);
-g.connect(ctx.destination);
+o.connect(g)
+g.connect(ctx.destination)
 
-o.start();
+o.start()
 
-g.gain.exponentialRampToValueAtTime(
-0.00001,ctx.currentTime+0.6
-);
+g.gain.exponentialRampToValueAtTime(0.00001,ctx.currentTime+0.6)
 
 }
 
 function overridePickup(){
 
-let newTime=document.getElementById("overrideTime").value;
+let newTime=overrideTime.value
 
-if(!newTime)return;
+if(!newTime)return
 
-let children=getChildren();
+let children=getChildren()
 
-children=children.map(c=>({...c,time:newTime}));
+children=children.map(c=>({...c,time:newTime}))
 
-saveChildren(children);
+saveChildren(children)
 
-playChime();
+playChime()
 
 }
 
-renderChildren();
+function saveSchedule(){
+
+let schedule={
+mon:mon.value,
+tue:tue.value,
+wed:wed.value,
+thu:thu.value,
+fri:fri.value
+}
+
+localStorage.setItem("pickuppal_schedule",JSON.stringify(schedule))
+
+playChime()
+
+}
+
+function getLifts(){
+return JSON.parse(localStorage.getItem("pickuppal_lifts")||"[]")
+}
+
+function addLift(){
+
+let parent=parentName.value
+let school=schoolLift.value
+let type=liftType.value
+
+if(!parent||!school)return
+
+let lifts=getLifts()
+
+lifts.push({parent,school,type})
+
+localStorage.setItem("pickuppal_lifts",JSON.stringify(lifts))
+
+renderLifts()
+
+parentName.value=""
+schoolLift.value=""
+}
+
+function renderLifts(){
+
+let lifts=getLifts()
+
+liftBoard.innerHTML=""
+
+lifts.forEach(l=>{
+
+liftBoard.innerHTML+=`
+<div class="liftCard">
+<b>${l.parent}</b><br>
+${l.type=="offer"?"Offering lift":"Needs lift"}<br>
+School: ${l.school}<br>
+<button onclick="openMap('${l.school}')">Navigate</button>
+</div>
+`
+
+})
+
+}
+
+renderChildren()
+renderLifts()
 
 </script>
 
