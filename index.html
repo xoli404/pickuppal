@@ -1,23 +1,24 @@
 ```html
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>PickUpPal</title>
 
 <style>
-body{font-family:Arial;margin:0;background:#f6f6fb}
-header{background:#6b5cff;color:white;padding:16px;text-align:center}
-.container{padding:20px}
-.card{background:white;padding:16px;margin-bottom:15px;border-radius:10px}
-button{background:#6b5cff;color:white;border:none;padding:8px;border-radius:6px}
-input,select{width:100%;padding:8px;margin:5px 0}
-nav{position:fixed;bottom:0;width:100%;display:flex;background:white}
-nav button{flex:1;padding:12px}
+body{font-family:Arial;margin:0;background:#f5f6fa}
+header{background:#6b5cff;color:#fff;padding:15px;text-align:center}
+.container{padding:15px}
+.card{background:#fff;padding:12px;margin-bottom:12px;border-radius:8px}
+button{padding:6px 10px;margin:3px;border:none;border-radius:5px;background:#6b5cff;color:#fff}
+.small{font-size:12px;color:#555}
+.chatBox{max-height:150px;overflow:auto;background:#eee;padding:5px;margin-top:5px}
+.message{background:#fff;padding:5px;margin:3px;border-radius:4px}
+nav{position:fixed;bottom:0;width:100%;display:flex;background:#fff}
+nav button{flex:1;padding:10px}
 .screen{display:none;padding-bottom:80px}
 .active{display:block}
-.match{background:#e8f7ff;padding:10px;margin-top:10px;border-radius:6px}
+.star{color:gold}
 </style>
 </head>
 
@@ -27,163 +28,173 @@ nav button{flex:1;padding:12px}
 
 <div class="container">
 
-<!-- TODAY -->
 <div id="today" class="screen active">
 <div class="card">
-<h3>Today's Schedule</h3>
-<div id="todayList"></div>
-</div>
-
-<div class="card">
-<h3>🚗 Lift Matches</h3>
-<div id="matchList"></div>
+<h3>Lift Matches</h3>
+<div id="matches"></div>
 </div>
 </div>
 
-<!-- CHILDREN -->
-<div id="children" class="screen">
-<div class="card">
-<input id="childName" placeholder="Child Name">
-<button onclick="addChild()">Add</button>
-</div>
-<div id="childrenList"></div>
-</div>
-
-<!-- SCHEDULE -->
-<div id="schedule" class="screen">
-<div class="card">
-<select id="eventChild"></select>
-<input type="time" id="eventTime">
-<input id="eventTitle" placeholder="What is happening?">
-<input id="eventNotes" placeholder="Notes (optional)">
-<button onclick="addEvent()">Add Event</button>
-</div>
-<div id="eventList"></div>
-</div>
-
-<!-- LIFTS -->
 <div id="lifts" class="screen">
 <div class="card">
-<select id="liftChild"></select>
+<input id="parentName" placeholder="Your Name">
 <input type="time" id="liftTime">
-<input id="liftDestination" placeholder="Destination (School/Home)">
-<input id="liftNotes" placeholder="Notes (e.g. kit bag)">
+<input id="liftDest" placeholder="Destination">
+<input id="liftNotes" placeholder="Notes">
 <button onclick="addLift()">Request Lift</button>
 </div>
+
 <div id="liftList"></div>
 </div>
 
 </div>
 
 <nav>
-<button onclick="show('today')">Today</button>
-<button onclick="show('children')">Children</button>
-<button onclick="show('schedule')">Schedule</button>
+<button onclick="show('today')">Matches</button>
 <button onclick="show('lifts')">Lift-Share</button>
 </nav>
 
 <script>
 
-// NAV
+const get=k=>JSON.parse(localStorage.getItem(k)||"[]")
+const set=(k,v)=>localStorage.setItem(k,JSON.stringify(v))
+
 function show(id){
 document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"))
 document.getElementById(id).classList.add("active")
 }
 
-// STORAGE
-const get=(k)=>JSON.parse(localStorage.getItem(k)||"[]")
-const set=(k,v)=>localStorage.setItem(k,JSON.stringify(v))
-
-// CHILD
-function addChild(){
-let c=get("children")
-c.push({name:childName.value})
-set("children",c)
-childName.value=""
-render()
-}
-
-// EVENT
-function addEvent(){
-let e=get("events")
-e.push({
-child:eventChild.value,
-time:eventTime.value,
-title:eventTitle.value,
-notes:eventNotes.value
-})
-set("events",e)
-render()
-}
-
-// LIFT
+// ADD LIFT
 function addLift(){
-let l=get("lifts")
-l.push({
-child:liftChild.value,
+let lifts=get("lifts")
+lifts.push({
+id:Date.now(),
+parent:parentName.value,
 time:liftTime.value,
-dest:liftDestination.value,
-notes:liftNotes.value
+dest:liftDest.value,
+notes:liftNotes.value,
+accepted:[],
+chat:[],
+ratings:[]
 })
-set("lifts",l)
+set("lifts",lifts)
+render()
+}
+
+// ACCEPT
+function acceptLift(id){
+let lifts=get("lifts")
+let me=parentName.value
+
+lifts=lifts.map(l=>{
+if(l.id==id && !l.accepted.includes(me)){
+l.accepted.push(me)
+}
+return l
+})
+
+set("lifts",lifts)
+render()
+}
+
+// DECLINE
+function declineLift(id){
+alert("Declined")
+}
+
+// CHAT
+function sendMessage(id,inputId){
+let lifts=get("lifts")
+let msg=document.getElementById(inputId).value
+let me=parentName.value
+
+lifts=lifts.map(l=>{
+if(l.id==id){
+l.chat.push({user:me,text:msg})
+}
+return l
+})
+
+set("lifts",lifts)
+render()
+}
+
+// RATE
+function rate(id,stars){
+let lifts=get("lifts")
+let me=parentName.value
+
+lifts=lifts.map(l=>{
+if(l.id==id){
+l.ratings.push({user:me,stars})
+}
+return l
+})
+
+set("lifts",lifts)
 render()
 }
 
 // RENDER
 function render(){
 
-let children=get("children")
-let events=get("events")
 let lifts=get("lifts")
 
-// dropdowns
-eventChild.innerHTML=""
-liftChild.innerHTML=""
-children.forEach((c,i)=>{
-eventChild.innerHTML+=`<option value="${i}">${c.name}</option>`
-liftChild.innerHTML+=`<option value="${i}">${c.name}</option>`
-})
-
-// TODAY
-todayList.innerHTML=""
-children.forEach((c,i)=>{
-let ev=events.filter(e=>e.child==i)
-if(ev.length){
-todayList.innerHTML+=`<b>${c.name}</b>`
-ev.forEach(e=>{
-todayList.innerHTML+=`<div>${e.time} - ${e.title}<br><small>${e.notes||""}</small></div>`
-})
-}
-})
-
-// LIFTS
+// LIST
 liftList.innerHTML=""
+
 lifts.forEach(l=>{
-let name=children[l.child]?.name
+
+let avg=0
+if(l.ratings.length){
+avg=(l.ratings.reduce((a,b)=>a+b.stars,0)/l.ratings.length).toFixed(1)
+}
+
+let chatHTML=l.chat.map(c=>`<div class="message">${c.user}: ${c.text}</div>`).join("")
+
 liftList.innerHTML+=`
+<div class="card">
+<b>${l.parent}</b> (${l.time} → ${l.dest})<br>
+<span class="small">${l.notes}</span><br>
+
+<button onclick="acceptLift(${l.id})">Accept</button>
+<button onclick="declineLift(${l.id})">Decline</button>
+
+<div>⭐ ${avg||"No ratings yet"}</div>
+
 <div>
-${name} - ${l.time} → ${l.dest}<br>
-<small>${l.notes}</small>
-</div>`
+Rate:
+<button onclick="rate(${l.id},5)">5⭐</button>
+<button onclick="rate(${l.id},4)">4⭐</button>
+<button onclick="rate(${l.id},3)">3⭐</button>
+</div>
+
+<div class="chatBox">${chatHTML}</div>
+<input id="msg${l.id}" placeholder="Message">
+<button onclick="sendMessage(${l.id},'msg${l.id}')">Send</button>
+
+</div>
+`
+
 })
 
-// MATCHING ENGINE 🔥
-let matches={}
+// MATCHES
+let matchMap={}
 
 lifts.forEach(l=>{
 let key=l.time+"-"+l.dest
-if(!matches[key])matches[key]=[]
-matches[key].push(children[l.child]?.name)
+if(!matchMap[key])matchMap[key]=[]
+matchMap[key].push(l.parent)
 })
 
-matchList.innerHTML=""
+matches.innerHTML=""
 
-Object.keys(matches).forEach(k=>{
-if(matches[k].length>1){
-matchList.innerHTML+=`
-<div class="match">
+Object.keys(matchMap).forEach(k=>{
+if(matchMap[k].length>1){
+matches.innerHTML+=`
+<div class="card">
 🚗 Match (${k})<br>
-${matches[k].join(", ")}
+${matchMap[k].join(", ")}
 </div>`
 }
 })
