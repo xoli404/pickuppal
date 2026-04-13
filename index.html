@@ -1,290 +1,480 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>PickUpPal</title>
-
-<style>
-body{font-family:Arial;margin:0;background:#f5f6fa}
-header{background:#6b5cff;color:#fff;padding:15px;text-align:center}
-.container{padding:15px}
-.card{background:#fff;padding:12px;margin-bottom:12px;border-radius:8px}
-button{padding:6px 10px;margin:3px;border:none;border-radius:5px;background:#6b5cff;color:#fff}
-.deleteBtn{background:#ff4d4d}
-input,select{width:100%;padding:6px;margin:5px 0}
-
-nav{position:fixed;bottom:0;width:100%;display:flex;background:#6b5cff}
-nav button{flex:1;padding:12px;background:#6b5cff;color:#fff}
-nav button.active{background:#fff;color:#6b5cff;font-weight:bold}
-
-.screen{display:none;padding-bottom:80px}
-.activeScreen{display:block}
-
-.chatBox{max-height:120px;overflow:auto;background:#eee;padding:5px}
-.message{background:#fff;padding:5px;margin:3px;border-radius:4px}
-.status{font-size:12px;color:#666;margin-top:5px}
-</style>
+    <base target="_self">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PickUpPal</title>
+    <meta name="description" content="Manage school transport schedules for multiple children">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#7C3AED',
+                        'secondary': '#10B981',
+                        'light-purple': '#EDE9FE',
+                        'light-green': '#D1FAE5',
+                        'gray-light': '#F9FAFB'
+                    }
+                }
+            }
+        }
+    </script>
 </head>
+<body class="min-h-screen bg-gray-light font-sans">
+    <!-- Main container -->
+    <div class="min-h-screen flex flex-col">
+        <!-- Header -->
+        <header class="bg-primary text-white p-4">
+            <div class="flex items-center justify-between">
+                <h1 class="text-xl font-bold">PickUpPal</h1>
+                <div class="text-sm">School Transport Manager</div>
+            </div>
+        </header>
 
-<body>
+        <!-- Main content area -->
+        <main class="flex-1 p-4 overflow-y-auto">
+            <!-- Today Screen -->
+            <section id="today-screen" class="mb-8">
+                <h2 class="text-lg font-semibold mb-4 text-primary">Today's Schedule</h2>
+                <div id="today-cards-container" class="space-y-4"></div>
+            </section>
 
-<header>🚗 PickUpPal</header>
+            <!-- Children Management -->
+            <section id="children-screen" class="hidden mb-8">
+                <h2 class="text-lg font-semibold mb-4 text-primary">Children</h2>
+                <div class="mb-4">
+                    <button id="add-child-btn" class="bg-secondary text-white px-4 py-2 rounded-lg font-medium hover:bg-green-600 transition">Add Child</button>
+                </div>
+                <div id="children-list-container" class="space-y-4"></div>
+            </section>
 
-<div class="container">
+            <!-- Schedule Management -->
+            <section id="schedule-screen" class="hidden mb-8">
+                <h2 class="text-lg font-semibold mb-4 text-primary">Schedule</h2>
+                <div class="mb-4">
+                    <div class="flex items-center mb-2">
+                        <label for="child-select" class="mr-2 text-gray-700">Select Child:</label>
+                        <select id="child-select" class="border border-gray-300 rounded px-2 py-1 bg-white"></select>
+                    </div>
+                    <button id="add-event-btn" class="bg-secondary text-white px-4 py-2 rounded-lg font-medium hover:bg-green-600 transition">Add Event</button>
+                </div>
+                <div id="schedule-list-container"></div>
+            </section>
 
-<!-- TODAY -->
-<div id="today" class="screen activeScreen">
-<div id="todayList"></div>
-</div>
+            <!-- Group Chat -->
+            <section id="chat-screen" class="hidden mb-8">
+                <h2 class="text-lg font-semibold mb-4 text-primary">Group Chat</h2>
+                <div class="mb-4">
+                    <div class="flex">
+                        <input type="text" id="chat-input" placeholder="Type your message..." class="flex-1 border border-gray-300 rounded-l-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary">
+                        <button id="send-btn" class="bg-primary text-white px-4 py-2 rounded-r-lg font-medium hover:bg-purple-600 transition">Send</button>
+                    </div>
+                </div>
+                <div id="chat-messages-container" class="space-y-3"></div>
+            </section>
+        </main>
 
-<!-- CHILDREN -->
-<div id="children" class="screen">
-<div class="card">
-<input id="childName" placeholder="Child name">
-<button onclick="addChild()">Add Child</button>
-</div>
-<div id="childrenList"></div>
-</div>
+        <!-- Bottom Navigation -->
+        <footer class="bg-white border-t border-gray-200">
+            <nav class="flex justify-around p-3">
+                <button data-tab="today" class="tab-btn flex flex-col items-center p-2 text-primary hover:text-purple-600 transition">
+                    <i class="fas fa-calendar-day text-lg"></i>
+                    <span class="text-sm mt-1">Today</span>
+                </button>
+                <button data-tab="children" class="tab-btn flex flex-col items-center p-2 text-gray-600 hover:text-primary transition">
+                    <i class="fas fa-child text-lg"></i>
+                    <span class="text-sm mt-1">Children</span>
+                </button>
+                <button data-tab="schedule" class="tab-btn flex flex-col items-center p-2 text-gray-600 hover:text-primary transition">
+                    <i class="fas fa-clock text-lg"></i>
+                    <span class="text-sm mt-1">Schedule</span>
+                </button>
+                <button data-tab="chat" class="tab-btn flex flex-col items-center p-2 text-gray-600 hover:text-primary transition">
+                    <i class="fas fa-comments text-lg"></i>
+                    <span class="text-sm mt-1">Chat</span>
+                </button>
+            </nav>
+        </footer>
+    </div>
 
-<!-- SCHEDULE -->
-<div id="schedule" class="screen">
-<div class="card">
-<select id="eventChild"></select>
-<input type="time" id="eventTime">
-<input id="eventTitle" placeholder="Event">
-<input id="eventNotes" placeholder="Notes">
-<button onclick="addEvent()">Add Event</button>
-</div>
-<div id="eventList"></div>
-</div>
+    <!-- Modal for adding child -->
+    <div id="add-child-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-10">
+        <div class="bg-white rounded-lg p-6 m-4 max-w-sm w-full">
+            <h3 class="text-lg font-semibold mb-4 text-primary">Add Child</h3>
+            <input type="text" id="child-name-input" placeholder="Child's name" class="w-full border border-gray-300 rounded px-3 py-2 mb-4 focus:outline-none focus:ring-1 focus:ring-primary">
+            <div class="flex justify-end space-x-2">
+                <button id="cancel-child-btn" class="px-4 py-2 text-gray-600 hover:text-gray-800 transition">Cancel</button>
+                <button id="save-child-btn" class="bg-primary text-white px-4 py-2 rounded hover:bg-purple-600 transition">Save</button>
+            </div>
+        </div>
+    </div>
 
-<!-- LIFTS -->
-<div id="lifts" class="screen">
-<div class="card">
-<input id="parentName" placeholder="Your Name">
-<select id="liftChild"></select>
-<input type="time" id="liftTime">
-<input id="liftDest" placeholder="Destination">
-<input id="liftNotes" placeholder="Notes">
-<button onclick="addLift()">Request Lift</button>
-</div>
+    <!-- Modal for adding event -->
+    <div id="add-event-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-10">
+        <div class="bg-white rounded-lg p-6 m-4 max-w-sm w-full">
+            <h3 class="text-lg font-semibold mb-4 text-primary">Add Event</h3>
+            <div class="space-y-4">
+                <input type="time" id="event-time-input" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary">
+                <input type="text" id="event-activity-input" placeholder="Activity" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary">
+                <input type="text" id="event-notes-input" placeholder="Notes" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:outline-none focus:ring-1 focus:ring-primary">
+            </div>
+            <div class="flex justify-end space-x-2 mt-4">
+                <button id="cancel-event-btn" class="px-4 py-2 text-gray-600 hover:text-gray-800 transition">Cancel</button>
+                <button id="save-event-btn" class="bg-primary text-white px-4 py-2 rounded hover:bg-purple-600 transition">Save</button>
+            </div>
+        </div>
+    </div>
 
-<div id="matchList"></div>
-<div id="liftList"></div>
-</div>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
 
-</div>
+    <script>
+        // Data layer - All content stored as arrays/objects
+        const childrenData = [
+            { "id": 1, "name": "Emma Johnson" },
+            { "id": 2, "name": "Liam Smith" },
+            { "id": 3, "name": "Olivia Brown" }
+        ];
+        
+        const scheduleData = [
+            { "id": 1, "childId": 1, "time": "08:00", "activity": "Morning drop-off", "notes": "School bus arrives" },
+            { "id": 2, "childId": 1, "time": "15:30", "activity": "Afternoon pickup", "notes": "Meet at main gate" },
+            { "id": 3, "childId": 2, "time": "08:15", "activity": "Morning drop-off", "notes": "Walk to school" },
+            { "id": 4, "childId": 2, "time": "16:00", "activity": "Afternoon pickup", "notes": "Car pickup" },
+            { "id": 5, "childId": 3, "time": "08:30", "activity": "Morning drop-off", "notes": "Bus stop" },
+            { "id": 6, "childId": 3, "time": "15:45", "activity": "Afternoon pickup", "notes": "Sports practice" }
+        ];
+        
+        const chatMessages = [
+            { "id": 1, "sender": "Parent", "text": "Bus is running 5 minutes late today", "time": "08:05" },
+            { "id": 2, "sender": "Driver", "text": "All children picked up safely", "time": "16:10" },
+            { "id": 3, "sender": "Parent", "text": "Reminder: early dismissal tomorrow", "time": "14:30" }
+        ];
 
-<nav>
-<button onclick="show('today',this)" class="active">Today</button>
-<button onclick="show('children',this)">Children</button>
-<button onclick="show('schedule',this)">Schedule</button>
-<button onclick="show('lifts',this)">Lift</button>
-</nav>
+        // Initialize localStorage with sample data
+        function initializeStorage() {
+            if (!localStorage.getItem('pickupPalChildren')) {
+                localStorage.setItem('pickupPalChildren', JSON.stringify(childrenData));
+            }
+            if (!localStorage.getItem('pickupPalSchedule')) {
+                localStorage.setItem('pickupPalSchedule', JSON.stringify(scheduleData));
+            }
+            if (!localStorage.getItem('pickupPalChat')) {
+                localStorage.setItem('pickupPalChat', JSON.stringify(chatMessages));
+            }
+        }
 
-<script>
+        // Load data from localStorage
+        function loadChildren() {
+            return JSON.parse(localStorage.getItem('pickupPalChildren')) || [];
+        }
+        
+        function loadSchedule() {
+            return JSON.parse(localStorage.getItem('pickupPalSchedule')) || [];
+        }
+        
+        function loadChat() {
+            return JSON.parse(localStorage.getItem('pickupPalChat')) || [];
+        }
 
-const get=k=>JSON.parse(localStorage.getItem(k)||"[]")
-const set=(k,v)=>localStorage.setItem(k,JSON.stringify(v))
+        // Save data to localStorage
+        function saveChildren(children) {
+            localStorage.setItem('pickupPalChildren', JSON.stringify(children));
+        }
+        
+        function saveSchedule(schedule) {
+            localStorage.setItem('pickupPalSchedule', JSON.stringify(schedule));
+        }
+        
+        function saveChat(messages) {
+            localStorage.setItem('pickupPalChat', JSON.stringify(messages));
+        }
 
-function show(id,btn){
-document.querySelectorAll(".screen").forEach(s=>s.classList.remove("activeScreen"))
-document.getElementById(id).classList.add("activeScreen")
+        // Reusable render functions
+        function renderTodayCards(children, schedule) {
+            const today = new Date();
+            const todayStr = today.toISOString().split('T')[0];
+            
+            return children.map(child => {
+                const childEvents = schedule.filter(event => event.childId === child.id);
+                const todayEvents = childEvents.filter(event => {
+                    // For demo, show all events (in real app you'd filter by date)
+                    return true;
+                });
+                
+                const eventsHtml = todayEvents.length > 0 
+                    ? todayEvents.map(event => `
+                        <div class="mb-2 p-3 bg-light-green rounded">
+                            <div class="flex justify-between items-start">
+                                <div class="font-medium text-secondary">${event.time}</div>
+                                <div class="font-semibold">${event.activity}</div>
+                            </div>
+                            <div class="text-gray-600 mt-1">${event.notes}</div>
+                        </div>
+                    `).join('')
+                    : `<div class="text-gray-500 p-3">No events scheduled for today</div>`;
+                
+                return `
+                    <div class="bg-white rounded-xl shadow-sm p-4 border border-light-purple">
+                        <div class="flex justify-between items-start mb-3">
+                            <h3 class="text-lg font-semibold text-primary">${child.name}</h3>
+                            <div class="text-sm text-gray-500">Today</div>
+                        </div>
+                        ${eventsHtml}
+                    </div>
+                `;
+            }).join('');
+        }
 
-document.querySelectorAll("nav button").forEach(b=>b.classList.remove("active"))
-btn.classList.add("active")
-}
+        function renderChildrenList(children) {
+            return children.map(child => `
+                <div class="bg-white rounded-xl shadow-sm p-4 border border-light-purple flex justify-between items-center">
+                    <div class="font-medium text-primary">${child.name}</div>
+                    <button data-child-id="${child.id}" class="delete-child-btn text-red-500 hover:text-red-700 transition">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            `).join('');
+        }
 
-// CHILD
-function addChild(){
-let c=get("children")
-c.push({name:childName.value})
-set("children",c)
-childName.value=""
-render()
-}
+        function renderScheduleList(childId, schedule) {
+            const childSchedule = schedule.filter(event => event.childId === childId);
+            
+            if (childSchedule.length === 0) {
+                return `<div class="text-gray-500 p-4">No events scheduled for this child</div>`;
+            }
+            
+            return childSchedule.map(event => `
+                <div class="bg-white rounded-xl shadow-sm p-4 border border-light-purple mb-3">
+                    <div class="flex justify-between items-start">
+                        <div class="font-medium text-secondary">${event.time}</div>
+                        <button data-event-id="${event.id}" class="delete-event-btn text-red-500 hover:text-red-700 transition">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                    <div class="font-semibold mt-2">${event.activity}</div>
+                    <div class="text-gray-600 mt-1">${event.notes}</div>
+                </div>
+            `).join('');
+        }
 
-function deleteChild(i){
-let c=get("children")
-c.splice(i,1)
-set("children",c)
-render()
-}
+        function renderChatMessages(messages) {
+            return messages.map(message => `
+                <div class="bg-white rounded-xl shadow-sm p-4 border border-light-purple">
+                    <div class="flex justify-between items-start mb-2">
+                        <div class="font-semibold text-primary">${message.sender}</div>
+                        <div class="text-sm text-gray-500">${message.time}</div>
+                    </div>
+                    <div class="text-gray-700">${message.text}</div>
+                </div>
+            `).join('');
+        }
 
-// EVENT
-function addEvent(){
-let e=get("events")
-e.push({
-child:eventChild.value,
-time:eventTime.value,
-title:eventTitle.value,
-notes:eventNotes.value
-})
-set("events",e)
-render()
-}
+        function renderChildSelectOptions(children) {
+            return children.map(child => `
+                <option value="${child.id}">${child.name}</option>
+            `).join('');
+        }
 
-// LIFT
-function addLift(){
-let l=get("lifts")
-l.push({
-id:Date.now(),
-parent:parentName.value,
-child:liftChild.value,
-time:liftTime.value,
-dest:liftDest.value,
-notes:liftNotes.value,
-accepted:[],
-chat:[],
-status:"open"
-})
-set("lifts",l)
-render()
-}
+        // DOM manipulation functions
+        function updateTodayScreen() {
+            const children = loadChildren();
+            const schedule = loadSchedule();
+            document.getElementById('today-cards-container').innerHTML = renderTodayCards(children, schedule);
+        }
 
-// FLOW
-function acceptLift(id){
-let lifts=get("lifts")
-let me=parentName.value
-lifts.forEach(l=>{
-if(l.id==id && !l.accepted.includes(me)){
-l.accepted.push(me)
-}
-})
-set("lifts",lifts)
-render()
-}
+        function updateChildrenScreen() {
+            const children = loadChildren();
+            document.getElementById('children-list-container').innerHTML = renderChildrenList(children);
+        }
 
-function confirmTrip(id){updateStatus(id,"confirmed")}
-function startTrip(id){updateStatus(id,"in_progress")}
-function completeTrip(id){updateStatus(id,"completed")}
+        function updateScheduleScreen() {
+            const children = loadChildren();
+            const schedule = loadSchedule();
+            const childSelect = document.getElementById('child-select');
 
-function updateStatus(id,status){
-let lifts=get("lifts")
-lifts.forEach(l=>{
-if(l.id==id){l.status=status}
-})
-set("lifts",lifts)
-render()
-}
+            // Preserve selected value
+            const currentValue = childSelect.value;
 
-// CHAT
-function sendMsg(id,inputId){
-let lifts=get("lifts")
-let msg=document.getElementById(inputId).value
-let me=parentName.value
+            childSelect.innerHTML = renderChildSelectOptions(children);
 
-if(!msg) return
+            // Restore selection
+            if (currentValue) {
+                childSelect.value = currentValue;
+            }
 
-lifts.forEach(l=>{
-if(l.id==id){
-l.chat.push({user:me,text:msg})
-}
-})
+            const selectedChildId = parseInt(childSelect.value) || children[0]?.id || 0;
+            document.getElementById('schedule-list-container').innerHTML = renderScheduleList(selectedChildId, schedule);
+        }
 
-set("lifts",lifts)
-render()
-}
+        function updateChatScreen() {
+            const messages = loadChat();
+            document.getElementById('chat-messages-container').innerHTML = renderChatMessages(messages);
+        }
 
-// RENDER
-function render(){
+        function updateAllScreens() {
+            updateTodayScreen();
+            updateChildrenScreen();
+            updateScheduleScreen();
+            updateChatScreen();
+        }
 
-let children=get("children")
-let events=get("events")
-let lifts=get("lifts")
+        // Navigation handling
+        function showScreen(screenId) {
+            // Hide all screens
+            document.getElementById('today-screen').classList.add('hidden');
+            document.getElementById('children-screen').classList.add('hidden');
+            document.getElementById('schedule-screen').classList.add('hidden');
+            document.getElementById('chat-screen').classList.add('hidden');
+            
+            // Show selected screen
+            document.getElementById(screenId + '-screen').classList.remove('hidden');
+            
+            // Update tab styles
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                if (btn.dataset.tab === screenId) {
+                    btn.classList.remove('text-gray-600');
+                    btn.classList.add('text-primary');
+                } else {
+                    btn.classList.remove('text-primary');
+                    btn.classList.add('text-gray-600');
+                }
+            });
+            
+            // Update screen content
+            if (screenId === 'today') updateTodayScreen();
+            else if (screenId === 'children') updateChildrenScreen();
+            else if (screenId === 'schedule') updateScheduleScreen();
+            else if (screenId === 'chat') updateChatScreen();
+        }
 
-// CHILDREN
-childrenList.innerHTML=""
-eventChild.innerHTML=""
-liftChild.innerHTML=""
+        // Event delegation setup
+        function setupEventDelegation() {
+            // Tab navigation
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    showScreen(btn.dataset.tab);
+                });
+            });
+            
+            // Add child
+            document.getElementById('add-child-btn').addEventListener('click', () => {
+                document.getElementById('add-child-modal').classList.remove('hidden');
+                document.getElementById('child-name-input').value = '';
+            });
+            
+            document.getElementById('cancel-child-btn').addEventListener('click', () => {
+                document.getElementById('add-child-modal').classList.add('hidden');
+            });
+            
+            document.getElementById('save-child-btn').addEventListener('click', () => {
+                const name = document.getElementById('child-name-input').value.trim();
+                if (name) {
+                    const children = loadChildren();
+                    const newId = children.length > 0 ? Math.max(...children.map(c => c.id)) + 1 : 1;
+                    children.push({ id: newId, name });
+                    saveChildren(children);
+                    updateAllScreens();
+                    document.getElementById('add-child-modal').classList.add('hidden');
+                }
+            });
+            
+            // Delete child (delegated)
+            document.addEventListener('click', event => {
+                const deleteBtn = event.target.closest('.delete-child-btn');
+                if (deleteBtn) {
+                    const childId = parseInt(deleteBtn.dataset.childId);
+                    const children = loadChildren();
+                    const updatedChildren = children.filter(child => child.id !== childId);
+                    saveChildren(updatedChildren);
+                    updateAllScreens();
+                }
+            });
+            
+            // Add event
+            document.getElementById('add-event-btn').addEventListener('click', () => {
+                document.getElementById('add-event-modal').classList.remove('hidden');
+                document.getElementById('event-time-input').value = '';
+                document.getElementById('event-activity-input').value = '';
+                document.getElementById('event-notes-input').value = '';
+            });
+            
+            document.getElementById('cancel-event-btn').addEventListener('click', () => {
+                document.getElementById('add-event-modal').classList.add('hidden');
+            });
+            
+            document.getElementById('save-event-btn').addEventListener('click', () => {
+                const time = document.getElementById('event-time-input').value;
+                const activity = document.getElementById('event-activity-input').value.trim();
+                const notes = document.getElementById('event-notes-input').value.trim();
+                const childId = parseInt(document.getElementById('child-select').value);
+                
+                if (time && activity && childId) {
+                    const schedule = loadSchedule();
+                    const newId = schedule.length > 0 ? Math.max(...schedule.map(e => e.id)) + 1 : 1;
+                    schedule.push({ id: newId, childId, time, activity, notes });
+                    saveSchedule(schedule);
+                    updateAllScreens();
+                    document.getElementById('add-event-modal').classList.add('hidden');
+                }
+            });
+            
+            // Delete event (delegated)
+            document.addEventListener('click', event => {
+                const deleteBtn = event.target.closest('.delete-event-btn');
+                if (deleteBtn) {
+                    const eventId = parseInt(deleteBtn.dataset.eventId);
+                    const schedule = loadSchedule();
+                    const updatedSchedule = schedule.filter(event => event.id !== eventId);
+                    saveSchedule(updatedSchedule);
+                    updateAllScreens();
+                }
+            });
+            
+            // Child select change
+            document.getElementById('child-select').addEventListener('change', () => {
+                updateScheduleScreen();
+            });
+            
+            // Chat send
+            document.getElementById('send-btn').addEventListener('click', () => {
+                const input = document.getElementById('chat-input');
+                const text = input.value.trim();
+                
+                if (text) {
+                    const messages = loadChat();
+                    const newId = messages.length > 0 ? Math.max(...messages.map(m => m.id)) + 1 : 1;
+                    const now = new Date();
+                    const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+                    
+                    messages.push({ id: newId, sender: "You", text, time: timeStr });
+                    saveChat(messages);
+                    updateChatScreen();
+                    input.value = '';
+                }
+            });
+            
+            // Chat input enter key
+            document.getElementById('chat-input').addEventListener('keypress', event => {
+                if (event.key === 'Enter') {
+                    document.getElementById('send-btn').click();
+                }
+            });
+        }
 
-children.forEach((c,i)=>{
-childrenList.innerHTML+=`
-<div class="card">
-${c.name}
-<button class="deleteBtn" onclick="deleteChild(${i})">Delete</button>
-</div>`
-eventChild.innerHTML+=`<option value="${i}">${c.name}</option>`
-liftChild.innerHTML+=`<option value="${i}">${c.name}</option>`
-})
+        // Initialize app
+        function initApp() {
+            initializeStorage();
+            updateAllScreens();
+            setupEventDelegation();
+            showScreen('today'); // Start with Today screen
+        }
 
-// TODAY (FIXED)
-todayList.innerHTML=""
-children.forEach((c,i)=>{
-let ev=events.filter(e=>e.child==i).sort((a,b)=>a.time.localeCompare(b.time))
-if(ev.length){
-todayList.innerHTML+=`<div class="card"><b>${c.name}</b>`
-ev.forEach(e=>{
-todayList.innerHTML+=`<div>${e.time} - ${e.title}</div>`
-})
-todayList.innerHTML+=`</div>`
-}
-})
-
-// EVENTS LIST
-eventList.innerHTML=""
-events.forEach(e=>{
-let name=children[e.child]?.name
-eventList.innerHTML+=`
-<div class="card">
-<b>${name}</b> - ${e.time}<br>
-${e.title}<br>
-<small>${e.notes||""}</small>
-</div>`
-})
-
-// MATCHES (ONLY IN LIFT TAB)
-matchList.innerHTML=""
-let matchMap={}
-
-lifts.forEach(l=>{
-let key=l.time+"-"+l.dest
-if(!matchMap[key])matchMap[key]=[]
-matchMap[key].push(l.parent)
-})
-
-Object.keys(matchMap).forEach(k=>{
-if(matchMap[k].length>1){
-matchList.innerHTML+=`
-<div class="card">
-🚗 Match (${k})<br>
-${matchMap[k].join(", ")}
-</div>`
-}
-})
-
-// LIFTS
-liftList.innerHTML=""
-lifts.forEach(l=>{
-let name=children[l.child]?.name
-
-let chatHTML=l.chat.map(c=>`<div class="message">${c.user}: ${c.text}</div>`).join("")
-
-liftList.innerHTML+=`
-<div class="card">
-<b>${l.parent}</b> (${l.time} → ${l.dest})<br>
-Child: ${name}<br>
-<small>${l.notes}</small><br>
-
-<div class="status">Status: ${l.status}</div>
-
-<button onclick="acceptLift(${l.id})">Accept</button>
-<button onclick="confirmTrip(${l.id})">Confirm</button>
-<button onclick="startTrip(${l.id})">Start</button>
-<button onclick="completeTrip(${l.id})">Complete</button>
-
-<div class="chatBox">${chatHTML}</div>
-<input id="msg${l.id}" placeholder="Message">
-<button onclick="sendMsg(${l.id},'msg${l.id}')">Send</button>
-</div>
-`
-})
-
-}
-
-render()
-
-</script>
-
+        // Start the app when page loads
+        document.addEventListener('DOMContentLoaded', initApp);
+    </script>
 </body>
 </html>
